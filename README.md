@@ -14,6 +14,14 @@ wallpaper previews, and apply the selected wallpaper without opening System Sett
   <img src="assets/flipwallpaper-demo.gif" alt="Flickwall wallpaper switcher demo" width="900">
 </p>
 
+## Download
+
+Download the latest `.dmg` from [GitHub Releases](https://github.com/tamo2918/Flickwall/releases/latest),
+open it, and drag `Flickwall.app` into `Applications`.
+
+The current GitHub binary is a non-notarized preview build. On first launch, macOS may
+show a security warning; use right-click > Open if you trust the downloaded release.
+
 ## Features
 
 - Global wallpaper switcher shortcut, defaulting to `Option + Command + W`
@@ -92,7 +100,7 @@ folders that the user selects through the macOS file picker.
 - The selected wallpaper is applied to all connected displays.
 - If the original image file is deleted, moved, or renamed, Flickwall may no longer be
   able to resolve that wallpaper.
-- Prebuilt notarized binaries are not published yet; build from source for now.
+- GitHub release builds are not notarized yet, so macOS may show a first-launch warning.
 
 ## Development Notes
 
