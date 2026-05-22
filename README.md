@@ -108,6 +108,7 @@ folders that the user selects through the macOS file picker.
 - Unit tests live in `FlickwallTests/`.
 - UI tests live in `FlickwallUITests/`.
 - `script/build_and_run.sh` is the canonical local build/run entrypoint.
+- AI coding agent guidance lives in [AGENTS.md](AGENTS.md).
 
 ## License
 
