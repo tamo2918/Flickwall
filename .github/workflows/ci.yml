@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: macos-26
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          if [ -d /Applications/Xcode_26.2.0.app ]; then
+            sudo xcode-select -s /Applications/Xcode_26.2.0.app
+          elif [ -d /Applications/Xcode_26.2.app ]; then
+            sudo xcode-select -s /Applications/Xcode_26.2.app
+          else
+            xcodebuild -version
+          fi
+
+      - name: Build
+        run: |
+          xcodebuild build \
+            -project Flickwall.xcodeproj \
+            -scheme Flickwall \
+            -configuration Debug \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Test
+        run: |
+          xcodebuild test \
+            -project Flickwall.xcodeproj \
+            -scheme Flickwall \
+            -configuration Debug \
+            -derivedDataPath build/DerivedData \
+            -only-testing:FlickwallTests \
+            CODE_SIGNING_ALLOWED=NO
