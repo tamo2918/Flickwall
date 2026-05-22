@@ -8,6 +8,12 @@ Flickwall is a native macOS wallpaper switcher built around a Command-Tab-style 
 Register image files or folders, open the switcher with a global shortcut, move through
 wallpaper previews, and apply the selected wallpaper without opening System Settings.
 
+## Demo
+
+<p align="center">
+  <img src="assets/flipwallpaper-demo.gif" alt="Flickwall wallpaper switcher demo" width="900">
+</p>
+
 ## Features
 
 - Global wallpaper switcher shortcut, defaulting to `Option + Command + W`
