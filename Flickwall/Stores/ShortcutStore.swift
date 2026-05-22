@@ -17,7 +17,7 @@ final class ShortcutStore: ObservableObject {
 
         if let data = defaults.data(forKey: key),
            let decoded = try? JSONDecoder().decode(HotKeyShortcut.self, from: data) {
-            self.shortcut = decoded
+            self.shortcut = decoded == .legacyDefaultValue ? .defaultValue : decoded
         } else {
             self.shortcut = .defaultValue
         }

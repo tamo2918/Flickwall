@@ -7,6 +7,11 @@ struct HotKeyShortcut: Codable, Equatable, Hashable {
 
     static let defaultValue = HotKeyShortcut(
         keyCode: UInt32(kVK_ANSI_W),
+        carbonModifiers: UInt32(cmdKey | optionKey)
+    )
+
+    static let legacyDefaultValue = HotKeyShortcut(
+        keyCode: UInt32(kVK_ANSI_W),
         carbonModifiers: UInt32(cmdKey | optionKey | controlKey)
     )
 
