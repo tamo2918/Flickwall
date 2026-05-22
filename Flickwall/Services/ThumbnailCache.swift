@@ -12,7 +12,7 @@ final class ThumbnailCache {
     }
 
     func image(for item: WallpaperItem, maxPixelSize: Int) async -> NSImage? {
-        let key = "\(item.id.uuidString)-\(item.path)-\(maxPixelSize)" as NSString
+        let key = "\(item.id.uuidString)-\(item.path)-\(item.contentFingerprint ?? "unknown")-\(maxPixelSize)" as NSString
         if let cachedImage = cache.object(forKey: key) {
             return cachedImage
         }
@@ -26,6 +26,10 @@ final class ThumbnailCache {
         }
 
         return loadedImage
+    }
+
+    func removeAll() {
+        cache.removeAllObjects()
     }
 
     private nonisolated static func makeThumbnail(for item: WallpaperItem, maxPixelSize: Int) -> NSImage? {

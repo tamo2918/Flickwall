@@ -24,6 +24,22 @@ enum FileImportService {
         }
     }
 
+    struct FolderScanResult: Sendable {
+        var source: WallpaperFolderSource
+        var importResult: ImportResult
+        var didScan: Bool
+
+        nonisolated init(
+            source: WallpaperFolderSource,
+            importResult: ImportResult = ImportResult(),
+            didScan: Bool = true
+        ) {
+            self.source = source
+            self.importResult = importResult
+            self.didScan = didScan
+        }
+    }
+
     @MainActor
     static func chooseImageFiles() -> [URL] {
         let panel = NSOpenPanel()
@@ -62,6 +78,14 @@ enum FileImportService {
         }.value
     }
 
+    nonisolated static func scanFolderSources(_ sources: [WallpaperFolderSource]) async -> [FolderScanResult] {
+        await Task.detached(priority: .userInitiated) {
+            sources.map { source in
+                scanFolderSource(source)
+            }
+        }.value
+    }
+
     private nonisolated static func buildWallpaperItems(from urls: [URL]) -> ImportResult {
         urls.reduce(into: ImportResult()) { result, url in
             guard isSupportedImage(url) else {
@@ -95,6 +119,40 @@ enum FileImportService {
             return ImportResult()
         }
 
+        return buildWallpaperItems(from: enumerator.compactMap { entry in
+            entry as? URL
+        })
+    }
+
+    private nonisolated static func scanFolderSource(_ source: WallpaperFolderSource) -> FolderScanResult {
+        var refreshedSource = source
+
+        do {
+            try refreshedSource.refreshStoredLocation()
+        } catch {
+            return FolderScanResult(source: source, didScan: false)
+        }
+
+        do {
+            let result = try refreshedSource.withSecurityScopedURL { folder in
+                wallpaperItems(in: folder, sourceFolderID: refreshedSource.id)
+            }
+
+            return FolderScanResult(source: refreshedSource, importResult: result, didScan: true)
+        } catch {
+            return FolderScanResult(source: refreshedSource, didScan: false)
+        }
+    }
+
+    private nonisolated static func wallpaperItems(in folder: URL, sourceFolderID: UUID?) -> ImportResult {
+        guard let enumerator = FileManager.default.enumerator(
+            at: folder,
+            includingPropertiesForKeys: [.isRegularFileKey, .contentTypeKey, .contentModificationDateKey, .fileSizeKey],
+            options: [.skipsHiddenFiles, .skipsPackageDescendants]
+        ) else {
+            return ImportResult()
+        }
+
         return enumerator.reduce(into: ImportResult()) { result, entry in
             guard let url = entry as? URL else {
                 return
@@ -107,7 +165,7 @@ enum FileImportService {
             result.discoveredImageCount += 1
 
             do {
-                result.importedItems.append(try WallpaperItem.make(from: url))
+                result.importedItems.append(try WallpaperItem.make(from: url, sourceFolderID: sourceFolderID))
             } catch {
                 result.failedItemCount += 1
             }

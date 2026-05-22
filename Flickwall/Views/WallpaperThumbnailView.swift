@@ -22,7 +22,7 @@ struct WallpaperThumbnailView: View {
             }
         }
         .clipped()
-        .task(id: "\(item.id.uuidString)-\(item.path)") {
+        .task(id: "\(item.id.uuidString)-\(item.path)-\(item.contentFingerprint ?? "unknown")") {
             await load()
         }
     }

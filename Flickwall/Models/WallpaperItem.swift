@@ -5,6 +5,8 @@ struct WallpaperItem: Identifiable, Codable, Hashable, Sendable {
     var displayName: String
     var path: String
     var bookmarkData: Data
+    var sourceFolderID: UUID?
+    var contentFingerprint: String?
     var addedAt: Date
     var lastUsedAt: Date?
     var isFavorite: Bool
@@ -14,6 +16,8 @@ struct WallpaperItem: Identifiable, Codable, Hashable, Sendable {
         displayName: String,
         path: String,
         bookmarkData: Data,
+        sourceFolderID: UUID? = nil,
+        contentFingerprint: String? = nil,
         addedAt: Date = Date(),
         lastUsedAt: Date? = nil,
         isFavorite: Bool = false
@@ -22,12 +26,14 @@ struct WallpaperItem: Identifiable, Codable, Hashable, Sendable {
         self.displayName = displayName
         self.path = path
         self.bookmarkData = bookmarkData
+        self.sourceFolderID = sourceFolderID
+        self.contentFingerprint = contentFingerprint
         self.addedAt = addedAt
         self.lastUsedAt = lastUsedAt
         self.isFavorite = isFavorite
     }
 
-    nonisolated static func make(from url: URL) throws -> WallpaperItem {
+    nonisolated static func make(from url: URL, sourceFolderID: UUID? = nil) throws -> WallpaperItem {
         let didStartAccessing = url.startAccessingSecurityScopedResource()
         defer {
             if didStartAccessing {
@@ -44,7 +50,9 @@ struct WallpaperItem: Identifiable, Codable, Hashable, Sendable {
         return WallpaperItem(
             displayName: url.deletingPathExtension().lastPathComponent,
             path: url.standardizedFileURL.path,
-            bookmarkData: bookmarkData
+            bookmarkData: bookmarkData,
+            sourceFolderID: sourceFolderID,
+            contentFingerprint: contentFingerprint(for: url)
         )
     }
 
@@ -52,16 +60,28 @@ struct WallpaperItem: Identifiable, Codable, Hashable, Sendable {
         try resolveBookmark().url
     }
 
+    @discardableResult
     nonisolated mutating func refreshBookmarkIfNeeded() throws -> Bool {
-        let resolved = try resolveBookmark()
-        guard resolved.isStale else {
-            return false
-        }
+        try refreshStoredLocation()
+    }
 
-        let refreshed = try WallpaperItem.make(from: resolved.url)
+    @discardableResult
+    nonisolated mutating func refreshStoredLocation() throws -> Bool {
+        let resolved = try resolveBookmark()
+        let refreshed = try WallpaperItem.make(from: resolved.url, sourceFolderID: sourceFolderID)
+
+        let didChange = resolved.isStale ||
+            displayName != refreshed.displayName ||
+            path != refreshed.path ||
+            bookmarkData != refreshed.bookmarkData ||
+            contentFingerprint != refreshed.contentFingerprint
+
+        displayName = refreshed.displayName
         path = refreshed.path
         bookmarkData = refreshed.bookmarkData
-        return true
+        contentFingerprint = refreshed.contentFingerprint
+
+        return didChange
     }
 
     private nonisolated func resolveBookmark() throws -> (url: URL, isStale: Bool) {
@@ -86,5 +106,15 @@ struct WallpaperItem: Identifiable, Codable, Hashable, Sendable {
         }
 
         return try body(url)
+    }
+
+    private nonisolated static func contentFingerprint(for url: URL) -> String? {
+        guard let values = try? url.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey]) else {
+            return nil
+        }
+
+        let modificationTime = values.contentModificationDate?.timeIntervalSinceReferenceDate ?? 0
+        let fileSize = values.fileSize ?? 0
+        return "\(modificationTime)-\(fileSize)"
     }
 }

@@ -9,6 +9,10 @@ final class WallpaperOverlayController {
     private let onCancel: () -> Void
     private var panel: WallpaperOverlayPanel?
     private var previousFrontmostApplication: NSRunningApplication?
+    private var shortcutRelease: HotKeyShortcut?
+    private var localReleaseMonitor: Any?
+    private var globalReleaseMonitor: Any?
+    private var isCompletingShortcutRelease = false
 
     init(store: WallpaperStore, onApply: @escaping () -> Void, onCancel: @escaping () -> Void) {
         self.store = store
@@ -20,14 +24,13 @@ final class WallpaperOverlayController {
         panel?.isVisible == true
     }
 
-    func show(applyOnModifierRelease requiredModifiers: NSEvent.ModifierFlags? = nil) {
+    func show(applyOnShortcutRelease shortcut: HotKeyShortcut? = nil) {
         guard !store.wallpapers.isEmpty else {
             return
         }
 
         let panel = panel ?? makePanel()
         self.panel = panel
-        panel.applyOnModifierRelease = requiredModifiers
 
         if !panel.isVisible {
             captureFrontmostApplication()
@@ -37,11 +40,15 @@ final class WallpaperOverlayController {
         panel.orderFrontRegardless()
         panel.makeKey()
         NSApp.activate(ignoringOtherApps: true)
+
+        if let shortcut {
+            startShortcutReleaseMonitoring(for: shortcut)
+        }
     }
 
     func hide() {
+        stopShortcutReleaseMonitoring()
         panel?.orderOut(nil)
-        panel?.applyOnModifierRelease = nil
         restoreFrontmostApplication()
     }
 
@@ -102,6 +109,64 @@ final class WallpaperOverlayController {
         previousFrontmostApplication?.activate(options: [])
         previousFrontmostApplication = nil
     }
+
+    private func startShortcutReleaseMonitoring(for shortcut: HotKeyShortcut) {
+        stopShortcutReleaseMonitoring()
+        shortcutRelease = shortcut
+
+        localReleaseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged, .keyUp]) { [weak self] event in
+            self?.handleShortcutReleaseEvent(event)
+            return event
+        }
+
+        globalReleaseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.flagsChanged, .keyUp]) { [weak self] event in
+            Task { @MainActor [weak self] in
+                self?.handleShortcutReleaseEvent(event)
+            }
+        }
+    }
+
+    private func stopShortcutReleaseMonitoring() {
+        if let localReleaseMonitor {
+            NSEvent.removeMonitor(localReleaseMonitor)
+            self.localReleaseMonitor = nil
+        }
+
+        if let globalReleaseMonitor {
+            NSEvent.removeMonitor(globalReleaseMonitor)
+            self.globalReleaseMonitor = nil
+        }
+
+        shortcutRelease = nil
+        isCompletingShortcutRelease = false
+    }
+
+    private func handleShortcutReleaseEvent(_ event: NSEvent) {
+        guard let shortcutRelease, !isCompletingShortcutRelease else {
+            return
+        }
+
+        let currentFlags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let requiredFlags = shortcutRelease.eventModifiers
+        let didReleaseMainKey = event.type == .keyUp && event.keyCode == shortcutRelease.keyCode
+        let didReleaseModifier = currentFlags.intersection(requiredFlags) != requiredFlags
+
+        guard didReleaseMainKey || didReleaseModifier else {
+            return
+        }
+
+        completeShortcutRelease()
+    }
+
+    private func completeShortcutRelease() {
+        guard !isCompletingShortcutRelease else {
+            return
+        }
+
+        isCompletingShortcutRelease = true
+        stopShortcutReleaseMonitoring()
+        onApply()
+    }
 }
 
 final class WallpaperOverlayPanel: NSPanel {
@@ -113,7 +178,6 @@ final class WallpaperOverlayPanel: NSPanel {
     }
 
     var actionHandler: ((Action) -> Void)?
-    var applyOnModifierRelease: NSEvent.ModifierFlags?
 
     init() {
         super.init(
@@ -152,23 +216,6 @@ final class WallpaperOverlayPanel: NSPanel {
             actionHandler?(.cancel)
         default:
             super.keyDown(with: event)
-        }
-    }
-
-    override func flagsChanged(with event: NSEvent) {
-        if let applyOnModifierRelease {
-            let currentFlags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            if currentFlags.intersection(applyOnModifierRelease) != applyOnModifierRelease {
-                self.applyOnModifierRelease = nil
-                actionHandler?(.apply)
-                return
-            }
-        }
-
-        if applyOnModifierRelease == nil {
-            super.flagsChanged(with: event)
-        } else {
-            return
         }
     }
 }

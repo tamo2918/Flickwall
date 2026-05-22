@@ -12,6 +12,7 @@ final class AppCoordinator: ObservableObject {
 
     private let applier = WallpaperApplier()
     private let statusBarController = StatusBarController()
+    private let folderChangeMonitor = FolderChangeMonitor()
     private var hotKey: GlobalHotKey?
     private var hotKeyObserver: NSObjectProtocol?
     private var didStart = false
@@ -48,6 +49,8 @@ final class AppCoordinator: ObservableObject {
         didStart = true
         statusBarController.install()
         installHotKey()
+        configureFolderMonitoring()
+        syncFolderSources(store.folderSources, userInitiated: false)
     }
 
     func addImages() {
@@ -67,9 +70,20 @@ final class AppCoordinator: ObservableObject {
             return
         }
 
-        importWallpapers(emptyMessage: "No supported image files were found in the selected folder.") {
-            await FileImportService.wallpaperItems(in: folders)
+        guard !isImporting else {
+            lastError = "Flickwall is still importing images."
+            return
         }
+
+        let sources = folders.compactMap { try? WallpaperFolderSource.make(from: $0) }
+        guard !sources.isEmpty else {
+            lastError = "Flickwall could not save access to the selected folder."
+            return
+        }
+
+        let canonicalSources = store.addFolderSources(sources)
+        folderChangeMonitor.update(sources: store.folderSources)
+        syncFolderSources(canonicalSources, userInitiated: true)
     }
 
     private func importWallpapers(
@@ -165,10 +179,6 @@ final class AppCoordinator: ObservableObject {
 
     func openLibrary() {
         openMainWindow?()
-
-        DispatchQueue.main.async {
-            MainWindowController.shared.showWindow()
-        }
     }
 
     func updateShortcut(_ shortcut: HotKeyShortcut) {
@@ -207,6 +217,13 @@ final class AppCoordinator: ObservableObject {
         statusBarController.updateShortcutDisplay(shortcutStore.shortcut.displayText)
     }
 
+    private func configureFolderMonitoring() {
+        folderChangeMonitor.onFolderChanged = { [weak self] source in
+            self?.syncFolderSources([source], userInitiated: false)
+        }
+        folderChangeMonitor.update(sources: store.folderSources)
+    }
+
     private func installHotKey() {
         do {
             hotKey = try GlobalHotKey(shortcut: shortcutStore.shortcut)
@@ -233,12 +250,56 @@ final class AppCoordinator: ObservableObject {
         if overlayController.isVisible {
             store.selectNext()
         } else {
-            overlayController.show(applyOnModifierRelease: shortcutStore.shortcut.eventModifiers)
+            overlayController.show(applyOnShortcutRelease: shortcutStore.shortcut)
         }
     }
 
     private func applySelectedFromOverlay() {
         applySelected()
         overlayController.hide()
+    }
+
+    private func syncFolderSources(_ sources: [WallpaperFolderSource], userInitiated: Bool) {
+        guard !sources.isEmpty else {
+            return
+        }
+
+        if userInitiated {
+            isImporting = true
+        }
+
+        Task { [weak self] in
+            let scans = await FileImportService.scanFolderSources(sources)
+            guard let self else {
+                return
+            }
+
+            var combinedSummary = FolderSyncSummary()
+            for scan in scans {
+                let summary = store.syncFolderScan(scan)
+                combinedSummary.merge(summary)
+            }
+
+            folderChangeMonitor.update(sources: store.folderSources)
+
+            if userInitiated {
+                isImporting = false
+                reportFolderSync(combinedSummary)
+            }
+        }
+    }
+
+    private func reportFolderSync(_ summary: FolderSyncSummary) {
+        if !summary.didScan {
+            lastError = "Flickwall could not access one or more selected folders. Select the folder again if it was moved."
+        } else if summary.discoveredImageCount == 0 {
+            lastError = "The folder was added. New image files will appear automatically when they are added."
+        } else if summary.addedCount == 0 && summary.removedCount == 0 && summary.updatedCount == 0 {
+            lastError = "That folder is already up to date."
+        } else if summary.failedItemCount > 0 {
+            lastError = "Synced \(summary.addedCount) images. \(summary.failedItemCount) images could not be imported."
+        } else {
+            lastError = nil
+        }
     }
 }
