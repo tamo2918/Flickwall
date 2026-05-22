@@ -8,6 +8,7 @@ final class AppCoordinator: ObservableObject {
     let shortcutStore: ShortcutStore
 
     @Published var lastError: String?
+    @Published var isImporting = false
 
     private let applier = WallpaperApplier()
     private let statusBarController = StatusBarController()
@@ -55,8 +56,9 @@ final class AppCoordinator: ObservableObject {
             return
         }
 
-        let result = FileImportService.wallpaperItems(from: urls)
-        addImportedItems(result, emptyMessage: "No supported image files were selected.")
+        importWallpapers(emptyMessage: "No supported image files were selected.") {
+            await FileImportService.wallpaperItems(from: urls)
+        }
     }
 
     func addFolder() {
@@ -65,8 +67,31 @@ final class AppCoordinator: ObservableObject {
             return
         }
 
-        let result = FileImportService.wallpaperItems(in: folders)
-        addImportedItems(result, emptyMessage: "No supported image files were found in the selected folder.")
+        importWallpapers(emptyMessage: "No supported image files were found in the selected folder.") {
+            await FileImportService.wallpaperItems(in: folders)
+        }
+    }
+
+    private func importWallpapers(
+        emptyMessage: String,
+        operation: @escaping () async -> FileImportService.ImportResult
+    ) {
+        guard !isImporting else {
+            lastError = "Flickwall is still importing images."
+            return
+        }
+
+        isImporting = true
+
+        Task { [weak self] in
+            let result = await operation()
+            guard let self else {
+                return
+            }
+
+            isImporting = false
+            addImportedItems(result, emptyMessage: emptyMessage)
+        }
     }
 
     private func addImportedItems(_ result: FileImportService.ImportResult, emptyMessage: String) {

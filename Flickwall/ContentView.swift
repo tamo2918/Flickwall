@@ -53,12 +53,14 @@ struct ContentView: View {
                 } label: {
                     Label("Add Images", systemImage: "photo.badge.plus")
                 }
+                .disabled(coordinator.isImporting)
 
                 Button {
                     coordinator.addFolder()
                 } label: {
                     Label("Add Folder", systemImage: "folder.badge.plus")
                 }
+                .disabled(coordinator.isImporting)
 
                 Divider()
 

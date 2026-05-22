@@ -1,20 +1,30 @@
 import AppKit
 import UniformTypeIdentifiers
 
-@MainActor
 enum FileImportService {
-    struct ImportResult {
+    struct ImportResult: Sendable {
         var discoveredImageCount = 0
         var importedItems: [WallpaperItem] = []
         var failedItemCount = 0
 
-        mutating func merge(_ result: ImportResult) {
+        nonisolated init(
+            discoveredImageCount: Int = 0,
+            importedItems: [WallpaperItem] = [],
+            failedItemCount: Int = 0
+        ) {
+            self.discoveredImageCount = discoveredImageCount
+            self.importedItems = importedItems
+            self.failedItemCount = failedItemCount
+        }
+
+        nonisolated mutating func merge(_ result: ImportResult) {
             discoveredImageCount += result.discoveredImageCount
             importedItems.append(contentsOf: result.importedItems)
             failedItemCount += result.failedItemCount
         }
     }
 
+    @MainActor
     static func chooseImageFiles() -> [URL] {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.image]
@@ -26,6 +36,7 @@ enum FileImportService {
         return panel.runModal() == .OK ? panel.urls : []
     }
 
+    @MainActor
     static func chooseFolders() -> [URL] {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.folder]
@@ -37,7 +48,21 @@ enum FileImportService {
         return panel.runModal() == .OK ? panel.urls : []
     }
 
-    static func wallpaperItems(from urls: [URL]) -> ImportResult {
+    nonisolated static func wallpaperItems(from urls: [URL]) async -> ImportResult {
+        await Task.detached(priority: .userInitiated) {
+            buildWallpaperItems(from: urls)
+        }.value
+    }
+
+    nonisolated static func wallpaperItems(in folders: [URL]) async -> ImportResult {
+        await Task.detached(priority: .userInitiated) {
+            folders.reduce(into: ImportResult()) { result, folder in
+                result.merge(wallpaperItems(in: folder))
+            }
+        }.value
+    }
+
+    private nonisolated static func buildWallpaperItems(from urls: [URL]) -> ImportResult {
         urls.reduce(into: ImportResult()) { result, url in
             guard isSupportedImage(url) else {
                 return
@@ -53,14 +78,9 @@ enum FileImportService {
         }
     }
 
-    static func wallpaperItems(in folders: [URL]) -> ImportResult {
-        folders.reduce(into: ImportResult()) { result, folder in
-            result.merge(wallpaperItems(in: folder))
-        }
-    }
-
-    private static func wallpaperItems(in folder: URL) -> ImportResult {
+    private nonisolated static func wallpaperItems(in folder: URL) -> ImportResult {
         let didStartAccessing = folder.startAccessingSecurityScopedResource()
+
         defer {
             if didStartAccessing {
                 folder.stopAccessingSecurityScopedResource()
@@ -94,7 +114,7 @@ enum FileImportService {
         }
     }
 
-    private static func isSupportedImage(_ url: URL) -> Bool {
+    private nonisolated static func isSupportedImage(_ url: URL) -> Bool {
         if let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .contentTypeKey]),
            values.isRegularFile == true,
            values.contentType?.conforms(to: .image) == true {

@@ -22,15 +22,12 @@ struct WallpaperThumbnailView: View {
             }
         }
         .clipped()
-        .onAppear(perform: load)
-        .onChange(of: item.id) {
-            load()
+        .task(id: "\(item.id.uuidString)-\(item.path)") {
+            await load()
         }
     }
 
-    private func load() {
-        image = try? item.withSecurityScopedURL { url in
-            NSImage(contentsOf: url)
-        }
+    private func load() async {
+        image = await ThumbnailCache.shared.image(for: item, maxPixelSize: 640)
     }
 }

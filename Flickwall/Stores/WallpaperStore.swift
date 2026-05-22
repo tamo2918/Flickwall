@@ -16,11 +16,16 @@ final class WallpaperStore: ObservableObject {
     }
 
     private let defaults: UserDefaults
-    private let wallpapersKey = "wallpapers.v1"
+    private let libraryStorage: WallpaperLibraryStorage
+    private let legacyWallpapersKey = "wallpapers.v1"
     private let selectionKey = "selection.v1"
 
-    init(defaults: UserDefaults = .standard) {
+    init(
+        defaults: UserDefaults = .standard,
+        libraryStorage: WallpaperLibraryStorage = WallpaperLibraryStorage()
+    ) {
         self.defaults = defaults
+        self.libraryStorage = libraryStorage
         self.selectionID = nil
         load()
     }
@@ -129,9 +134,13 @@ final class WallpaperStore: ObservableObject {
     }
 
     private func load() {
-        if let data = defaults.data(forKey: wallpapersKey),
-           let decoded = try? JSONDecoder().decode([WallpaperItem].self, from: data) {
+        if let decoded = try? libraryStorage.load() {
             wallpapers = decoded
+        } else if let data = defaults.data(forKey: legacyWallpapersKey),
+                  let decoded = try? JSONDecoder().decode([WallpaperItem].self, from: data) {
+            wallpapers = decoded
+            try? libraryStorage.save(decoded)
+            defaults.removeObject(forKey: legacyWallpapersKey)
         }
 
         if let selectionString = defaults.string(forKey: selectionKey) {
@@ -141,17 +150,30 @@ final class WallpaperStore: ObservableObject {
         if selectionID == nil {
             selectionID = wallpapers.first?.id
         }
+
+        refreshStaleBookmarks()
     }
 
     private func saveWallpapers() {
-        guard let data = try? JSONEncoder().encode(wallpapers) else {
-            return
-        }
-
-        defaults.set(data, forKey: wallpapersKey)
+        try? libraryStorage.save(wallpapers)
     }
 
     private func saveSelection() {
         defaults.set(selectionID?.uuidString, forKey: selectionKey)
+    }
+
+    private func refreshStaleBookmarks() {
+        var refreshedWallpapers = wallpapers
+        var didRefresh = false
+
+        for index in refreshedWallpapers.indices {
+            if (try? refreshedWallpapers[index].refreshBookmarkIfNeeded()) == true {
+                didRefresh = true
+            }
+        }
+
+        if didRefresh {
+            wallpapers = refreshedWallpapers
+        }
     }
 }

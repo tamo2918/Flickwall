@@ -49,10 +49,12 @@ struct WallpaperLibraryView: View {
                 Button("Add Images") {
                     coordinator.addImages()
                 }
+                .disabled(coordinator.isImporting)
 
                 Button("Add Folder") {
                     coordinator.addFolder()
                 }
+                .disabled(coordinator.isImporting)
             }
         }
     }
@@ -135,18 +137,6 @@ private struct WallpaperCard: View {
                     .font(.headline)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
-
-                if let lastUsedAt = item.lastUsedAt {
-                    Text(lastUsedAt, style: .relative)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                } else {
-                    Text("Not applied yet")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
             }
             .padding(8)
             .frame(maxWidth: .infinity, alignment: .leading)

@@ -8,6 +8,7 @@ final class WallpaperOverlayController {
     private let onApply: () -> Void
     private let onCancel: () -> Void
     private var panel: WallpaperOverlayPanel?
+    private var previousFrontmostApplication: NSRunningApplication?
 
     init(store: WallpaperStore, onApply: @escaping () -> Void, onCancel: @escaping () -> Void) {
         self.store = store
@@ -27,7 +28,11 @@ final class WallpaperOverlayController {
         let panel = panel ?? makePanel()
         self.panel = panel
         panel.applyOnModifierRelease = requiredModifiers
-        panel.contentView = NSHostingView(rootView: WallpaperSwitcherOverlay(store: store))
+
+        if !panel.isVisible {
+            captureFrontmostApplication()
+        }
+
         position(panel)
         panel.orderFrontRegardless()
         panel.makeKey()
@@ -36,6 +41,8 @@ final class WallpaperOverlayController {
 
     func hide() {
         panel?.orderOut(nil)
+        panel?.applyOnModifierRelease = nil
+        restoreFrontmostApplication()
     }
 
     private func makePanel() -> WallpaperOverlayPanel {
@@ -43,6 +50,7 @@ final class WallpaperOverlayController {
         panel.actionHandler = { [weak self] action in
             self?.handle(action)
         }
+        panel.contentView = NSHostingView(rootView: WallpaperSwitcherOverlay(store: store))
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.level = .floating
         panel.backgroundColor = .clear
@@ -79,6 +87,20 @@ final class WallpaperOverlayController {
         )
 
         panel.setFrame(frame, display: true)
+    }
+
+    private func captureFrontmostApplication() {
+        let frontmostApplication = NSWorkspace.shared.frontmostApplication
+        if frontmostApplication?.bundleIdentifier == Bundle.main.bundleIdentifier {
+            previousFrontmostApplication = nil
+        } else {
+            previousFrontmostApplication = frontmostApplication
+        }
+    }
+
+    private func restoreFrontmostApplication() {
+        previousFrontmostApplication?.activate(options: [])
+        previousFrontmostApplication = nil
     }
 }
 
@@ -137,6 +159,7 @@ final class WallpaperOverlayPanel: NSPanel {
         if let applyOnModifierRelease {
             let currentFlags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             if currentFlags.intersection(applyOnModifierRelease) != applyOnModifierRelease {
+                self.applyOnModifierRelease = nil
                 actionHandler?(.apply)
                 return
             }

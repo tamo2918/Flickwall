@@ -1,6 +1,6 @@
 import Foundation
 
-struct WallpaperItem: Identifiable, Codable, Hashable {
+struct WallpaperItem: Identifiable, Codable, Hashable, Sendable {
     let id: UUID
     var displayName: String
     var path: String
@@ -9,7 +9,7 @@ struct WallpaperItem: Identifiable, Codable, Hashable {
     var lastUsedAt: Date?
     var isFavorite: Bool
 
-    init(
+    nonisolated init(
         id: UUID = UUID(),
         displayName: String,
         path: String,
@@ -27,7 +27,7 @@ struct WallpaperItem: Identifiable, Codable, Hashable {
         self.isFavorite = isFavorite
     }
 
-    static func make(from url: URL) throws -> WallpaperItem {
+    nonisolated static func make(from url: URL) throws -> WallpaperItem {
         let didStartAccessing = url.startAccessingSecurityScopedResource()
         defer {
             if didStartAccessing {
@@ -48,7 +48,23 @@ struct WallpaperItem: Identifiable, Codable, Hashable {
         )
     }
 
-    func resolvedURL() throws -> URL {
+    nonisolated func resolvedURL() throws -> URL {
+        try resolveBookmark().url
+    }
+
+    nonisolated mutating func refreshBookmarkIfNeeded() throws -> Bool {
+        let resolved = try resolveBookmark()
+        guard resolved.isStale else {
+            return false
+        }
+
+        let refreshed = try WallpaperItem.make(from: resolved.url)
+        path = refreshed.path
+        bookmarkData = refreshed.bookmarkData
+        return true
+    }
+
+    private nonisolated func resolveBookmark() throws -> (url: URL, isStale: Bool) {
         var isStale = false
         let url = try URL(
             resolvingBookmarkData: bookmarkData,
@@ -57,14 +73,10 @@ struct WallpaperItem: Identifiable, Codable, Hashable {
             bookmarkDataIsStale: &isStale
         )
 
-        guard !isStale else {
-            throw WallpaperItemError.staleBookmark(displayName)
-        }
-
-        return url
+        return (url, isStale)
     }
 
-    func withSecurityScopedURL<T>(_ body: (URL) throws -> T) throws -> T {
+    nonisolated func withSecurityScopedURL<T>(_ body: (URL) throws -> T) throws -> T {
         let url = try resolvedURL()
         let didStartAccessing = url.startAccessingSecurityScopedResource()
         defer {
@@ -74,16 +86,5 @@ struct WallpaperItem: Identifiable, Codable, Hashable {
         }
 
         return try body(url)
-    }
-}
-
-enum WallpaperItemError: LocalizedError {
-    case staleBookmark(String)
-
-    var errorDescription: String? {
-        switch self {
-        case .staleBookmark(let name):
-            return "The saved file permission for \"\(name)\" is stale. Add the image again."
-        }
     }
 }
