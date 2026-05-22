@@ -1,8 +1,18 @@
-# Flickwall
+<p align="center">
+  <img src="assets/flickwall-icon.png" alt="Flickwall のアプリアイコン" width="128">
+</p>
 
-[![CI](https://github.com/tamo2918/Flickwall/actions/workflows/ci.yml/badge.svg)](https://github.com/tamo2918/Flickwall/actions/workflows/ci.yml)
+<h1 align="center">Flickwall</h1>
 
-[English](README.md) | 日本語
+<p align="center">
+  <a href="https://github.com/tamo2918/Flickwall/actions/workflows/ci.yml">
+    <img src="https://github.com/tamo2918/Flickwall/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+</p>
+
+<p align="center">
+  <a href="README.md">English</a> | 日本語
+</p>
 
 Flickwall は、Command-Tab のアプリ切り替えに近いオーバーレイで操作できる
 ネイティブ macOS 向け壁紙切り替えアプリです。画像ファイルやフォルダを登録し、
