@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/tamo2918/Flickwall/actions/workflows/ci.yml/badge.svg)](https://github.com/tamo2918/Flickwall/actions/workflows/ci.yml)
 
+English | [日本語](README.ja.md)
+
 Flickwall is a native macOS wallpaper switcher built around a Command-Tab-style overlay.
 Register image files or folders, open the switcher with a global shortcut, move through
 wallpaper previews, and apply the selected wallpaper without opening System Settings.

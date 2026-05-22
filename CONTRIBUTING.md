@@ -1,5 +1,7 @@
 # Contributing
 
+English | [日本語](CONTRIBUTING.ja.md)
+
 Thanks for helping improve Flickwall.
 
 ## Development Setup

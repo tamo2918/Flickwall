@@ -1,37 +1,40 @@
-name: Bug report
-description: Report something that is not working correctly.
+name: Bug report / バグ報告
+description: Report something that is not working correctly. / 正しく動作しない問題を報告します。
 title: "[Bug]: "
 labels:
   - bug
 body:
   - type: markdown
     attributes:
-      value: Thanks for taking the time to report a problem with Flickwall.
+      value: |
+        Thanks for taking the time to report a problem with Flickwall.
+
+        Flickwall の問題報告にご協力いただきありがとうございます。
   - type: input
     id: macos-version
     attributes:
-      label: macOS version
+      label: macOS version / macOS バージョン
       placeholder: "26.2"
     validations:
       required: true
   - type: input
     id: app-version
     attributes:
-      label: Flickwall version or commit
+      label: Flickwall version or commit / Flickwall のバージョンまたはコミット
       placeholder: "main / commit hash / release version"
     validations:
       required: true
   - type: textarea
     id: description
     attributes:
-      label: What happened?
-      description: Describe the behavior and what you expected instead.
+      label: What happened? / 何が起きましたか？
+      description: Describe the behavior and what you expected instead. / 実際の挙動と期待していた挙動を書いてください。
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
-      label: Steps to reproduce
+      label: Steps to reproduce / 再現手順
       placeholder: |
         1. Add images from ...
         2. Press ...
@@ -41,5 +44,5 @@ body:
   - type: textarea
     id: logs
     attributes:
-      label: Logs or screenshots
-      description: Add screenshots, recordings, or relevant logs if available.
+      label: Logs or screenshots / ログまたはスクリーンショット
+      description: Add screenshots, recordings, or relevant logs if available. / 可能であればスクリーンショット、録画、関連ログを添付してください。

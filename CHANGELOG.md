@@ -1,5 +1,7 @@
 # Changelog
 
+English | [日本語](CHANGELOG.ja.md)
+
 This project follows a lightweight changelog until formal releases begin.
 
 ## Unreleased

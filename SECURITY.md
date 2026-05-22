@@ -1,5 +1,7 @@
 # Security Policy
 
+English | [日本語](SECURITY.ja.md)
+
 ## Supported Versions
 
 Security fixes are handled on the latest `main` branch until the project starts publishing

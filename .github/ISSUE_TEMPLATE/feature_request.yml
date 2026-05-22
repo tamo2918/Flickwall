@@ -1,5 +1,5 @@
-name: Feature request
-description: Suggest an improvement for Flickwall.
+name: Feature request / 機能提案
+description: Suggest an improvement for Flickwall. / Flickwall の改善案を提案します。
 title: "[Feature]: "
 labels:
   - enhancement
@@ -7,19 +7,19 @@ body:
   - type: textarea
     id: problem
     attributes:
-      label: Problem
-      description: What workflow or pain point should this improve?
+      label: Problem / 解決したいこと
+      description: What workflow or pain point should this improve? / どの作業や困りごとを改善したいですか？
     validations:
       required: true
   - type: textarea
     id: proposal
     attributes:
-      label: Proposed solution
-      description: Describe the behavior you would like Flickwall to support.
+      label: Proposed solution / 提案する解決策
+      description: Describe the behavior you would like Flickwall to support. / Flickwall に追加してほしい挙動を書いてください。
     validations:
       required: true
   - type: textarea
     id: alternatives
     attributes:
-      label: Alternatives considered
-      description: Optional context, related apps, or tradeoffs.
+      label: Alternatives considered / 検討した代替案
+      description: Optional context, related apps, or tradeoffs. / 関連アプリ、背景、トレードオフなどがあれば書いてください。

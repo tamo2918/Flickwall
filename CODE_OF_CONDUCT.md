@@ -1,5 +1,7 @@
 # Code of Conduct
 
+English | [日本語](CODE_OF_CONDUCT.ja.md)
+
 Flickwall aims to be a respectful, practical open source project.
 
 ## Expected Behavior
