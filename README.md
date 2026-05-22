@@ -38,7 +38,7 @@ show a security warning; use right-click > Open if you trust the downloaded rele
 - Customizable shortcut recorder in Settings
 - Horizontal wallpaper preview overlay with keyboard navigation
 - Menu bar status item for opening the library, switcher, and import actions
-- Image file and folder import
+- Image file import and live folder syncing
 - Favorites and recent wallpapers
 - Sandboxed file access using security-scoped bookmarks
 - Asynchronous thumbnail generation with in-memory caching
@@ -86,6 +86,7 @@ Stored data includes:
 
 - display name
 - original file path
+- folder source path, when a folder was added
 - security-scoped bookmark data
 - favorite state
 - added date
@@ -95,6 +96,12 @@ Library metadata is stored at:
 
 ```text
 ~/Library/Application Support/Flickwall/wallpapers.json
+```
+
+Folder source metadata is stored at:
+
+```text
+~/Library/Application Support/Flickwall/folders.json
 ```
 
 Thumbnails are generated from the original files and cached in memory only.
@@ -108,8 +115,8 @@ folders that the user selects through the macOS file picker.
 ## Known Limitations
 
 - The selected wallpaper is applied to all connected displays.
-- If the original image file is deleted, moved, or renamed, Flickwall may no longer be
-  able to resolve that wallpaper.
+- Standalone image files that were added individually can no longer be shown if the
+  original file is deleted and the bookmark cannot be resolved.
 - GitHub release builds are not notarized yet, so macOS may show a first-launch warning.
 
 ## Development Notes
